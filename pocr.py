@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
+from paddleocr import PaddleOCR
 import fitz
 import cv2
 import numpy as np
 import tqdm
 import sys
-from paddleocr import PaddleOCR
 import logging
 import argparse
 import pathlib
@@ -24,11 +24,11 @@ def process_pdf(input_pdf_path, output_pdf_path):
     img = fitz.open()
     if args.pure:
         pure = fitz.open()
-    ocr = PaddleOCR(use_angle_cls=True, lang="ch", use_gpu=True)
+    ocr = PaddleOCR(use_angle_cls=True, lang=args.lang, use_gpu=True)
     for page_number in tqdm.tqdm(
         range(
             pdf_doc.page_count
-            # 10
+            # 16
         )
     ):
         page = pdf_doc.load_page(page_number)
@@ -45,8 +45,9 @@ def process_pdf(input_pdf_path, output_pdf_path):
             cv2.COLOR_RGB2BGR,
         )
         cim = cv2.rotate(cim, (page.rotation // 90 - 1) % 3)
-        cv2.imshow(sys.argv[0], cim)
-        cv2.waitKey(1)
+        if args.cv:
+            cv2.imshow(sys.argv[0], cim)
+            cv2.waitKey(1)
         text = ocr.ocr(cim)
         if not text[0]:
             continue
@@ -76,6 +77,8 @@ def process_pdf(input_pdf_path, output_pdf_path):
                     fontsize=fs,
                     render_mode=0,
                 )
+    if args.cv:
+        cv2.destroyAllWindows()
     if args.pure:
         pure.set_page_labels(pdf_doc.get_page_labels())
         pure.save(
@@ -95,6 +98,10 @@ if __name__ == "__main__":
     parser.add_argument("input_file", help="Input PDF file")
     parser.add_argument("output_file", help="Output PDF file")
     parser.add_argument("-p", "--pure", action="store_true")
+    parser.add_argument("-c", "--cv", action="store_true")
+    parser.add_argument("-l", "--lang", default="ch")
+
     args = parser.parse_args()
-    cv2.namedWindow(sys.argv[0], cv2.WINDOW_NORMAL)
+    if args.cv:
+        cv2.namedWindow(sys.argv[0], cv2.WINDOW_NORMAL)
     process_pdf(args.input_file, args.output_file)
