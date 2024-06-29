@@ -80,11 +80,19 @@ def process_pdf(input_pdf_path, output_pdf_path):
     if args.cv:
         cv2.destroyAllWindows()
     if args.pure:
-        pure.set_page_labels(pdf_doc.get_page_labels())
+        if pdf_doc.get_page_labels():
+            pure.set_page_labels(pdf_doc.get_page_labels())
+        if pdf_doc.get_toc():
+            pure.set_toc(pdf_doc.get_toc())
         pure.save(
             pathlib.Path(output_pdf_path).stem + "-pure.pdf", garbage=4, deflate=True
         )
         pure.close()
+
+    if pdf_doc.get_page_labels():
+        img.set_page_labels(pdf_doc.get_page_labels())
+    if pdf_doc.get_toc():
+        img.set_toc(pdf_doc.get_toc())
     img.save(output_pdf_path, garbage=4, deflate=True)
     img.close()
     pdf_doc.close()
