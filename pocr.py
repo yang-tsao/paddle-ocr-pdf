@@ -37,24 +37,20 @@ def process_pdf(input_pdf_path, output_pdf_path):
         image_list = page.get_images()
         if not image_list:
             continue
-        pix = fitz.Pixmap(pdf_doc, image_list[0][0])
-        cim = cv2.cvtColor(
-            np.frombuffer(pix.samples, dtype=np.uint8).reshape(
-                (pix.height, pix.width, pix.n)
-            ),
-            cv2.COLOR_RGB2BGR,
-        )
-        cim = cv2.rotate(cim, (page.rotation // 90 - 1) % 3)
+        bin_img = pdf_doc.extract_image(image_list[0][0])
+        cim = cv2.imdecode(np.frombuffer(bin_img["image"], np.uint8), cv2.IMREAD_COLOR)
+        if page.rotation:
+            cim = cv2.rotate(cim, (page.rotation // 90 - 1) % 3)
         if args.cv:
             cv2.imshow(sys.argv[0], cim)
             cv2.waitKey(1)
+        img_page = img.new_page(width=cim.shape[1], height=cim.shape[0])
+        img_page.insert_image(img_page.rect, stream=bin_img["image"])
+        if args.pure:
+            new_page = pure.new_page(width=cim.shape[1], height=cim.shape[0])
         text = ocr.ocr(cim)
         if not text[0]:
             continue
-        img_page = img.new_page(width=cim.shape[1], height=cim.shape[0])
-        img_page.insert_image(img_page.rect, stream=im2stream(cim))
-        if args.pure:
-            new_page = pure.new_page(width=cim.shape[1], height=cim.shape[0])
         for o in text[0]:
             R = fitz.Rect(o[0][0], o[0][2])
             word = o[1][0]
