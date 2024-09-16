@@ -24,11 +24,16 @@ def process_pdf(input_pdf_path, output_pdf_path):
     img = fitz.open()
     if args.pure:
         pure = fitz.open()
-    ocr = PaddleOCR(use_angle_cls=True, lang=args.lang, use_gpu=True)
+    ocr = PaddleOCR(
+        use_angle_cls=True,
+        lang=args.lang,
+        use_gpu=True,
+    )
     for page_number in tqdm.tqdm(
         range(
             pdf_doc.page_count
-            # 16
+            # 1
+            # 10
         )
     ):
         page = pdf_doc.load_page(page_number)
@@ -37,22 +42,40 @@ def process_pdf(input_pdf_path, output_pdf_path):
         image_list = page.get_images()
         if not image_list:
             continue
-        bin_img = pdf_doc.extract_image(image_list[0][0])
+        xref_0 = image_list[0][0]
+        bin_img = pdf_doc.extract_image(xref_0)
         cim = cv2.imdecode(np.frombuffer(bin_img["image"], np.uint8), cv2.IMREAD_COLOR)
         if page.rotation:
             cim = cv2.rotate(cim, (page.rotation // 90 - 1) % 3)
         if args.cv:
             cv2.imshow(sys.argv[0], cim)
             cv2.waitKey(1)
-        img_page = img.new_page(width=cim.shape[1], height=cim.shape[0])
-        img_page.insert_image(img_page.rect, stream=bin_img["image"])
+        img_page = img.new_page(width=page.rect.width, height=page.rect.height)
+        xref = img_page.insert_image(
+            img_page.rect, stream=bin_img["image"], rotate=page.rotation
+        )
+        if "Decode" not in pdf_doc.xref_get_keys(xref_0):
+            img.xref_set_key(xref, "Decode", "null")
+        else:
+            print(f"Warning! Decode presents on page {page_number}! xref:{xref_0}")
+        # I don't know what to do if "Decode" presents
         if args.pure:
             new_page = pure.new_page(width=cim.shape[1], height=cim.shape[0])
         text = ocr.ocr(cim)
         if not text[0]:
             continue
         for o in text[0]:
-            R = fitz.Rect(o[0][0], o[0][2])
+
+            def position_convert(x):
+                return (
+                    x[0] / cim.shape[1] * page.rect.width,
+                    x[1] / cim.shape[0] * page.rect.height,
+                )
+
+            R = fitz.Rect(
+                position_convert(o[0][0]),
+                position_convert(o[0][2]),
+            )
             word = o[1][0]
             if o[1][1] < 0.9:
                 continue
