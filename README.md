@@ -7,7 +7,7 @@ A python script which employs PaddleOCR to add a hidden text layer to picture pd
 
 ### **安装`paddlepaddle`**
 
-具体参见<https://paddlepaddle.github.io/PaddleOCR/latest/quick_start.html>
+具体参见<https://paddlepaddle.github.io/PaddleOCR/latest/quick_start.html>，尤其是拥有GPU的用户。
 
 ```bash
 python -m pip install paddlepaddle==3.0.0rc1 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
